@@ -16,7 +16,7 @@ import pandas as pd
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
 """ Feature selection """
-df = pd.read_json('data.json')
+df = pd.read_json('2022-09-08 09:10:57.051192.json' )
 df['profit_ratio'] = (df['profit_ratio'].multiply(100)).round(2).astype(str) + '%'
 
 
@@ -27,8 +27,12 @@ short_df =  df.loc[(df['is_short'] == True)]
 """  Long experiment   """
 
 features = []
-for i in range(5):
+for i in range(20):
     features.append(f'rsi_-{i}')
+    features.append(f'mfi_-{i}')
+    features.append(f'kc_-{i}')
+    features.append(f'ema21_-{i}')
+
 X = long_df[features]
 y = long_df['label']
 X_pipeline = make_pipeline(StandardScaler())
@@ -53,14 +57,17 @@ def run_exps(X_train, y_train, X_test, y_test) -> pd.DataFrame:
     results = []
     names = []
     scoring = ['accuracy', 'precision_weighted', 'recall_weighted', 'f1_weighted', 'roc_auc']
-    target_names = ['malignant', 'benign']
+    # target_names = ['malignant', 'benign']
+    reports = []
     for name, model in models:
-        kfold = model_selection.KFold(n_splits=5, shuffle=True, random_state=90210)
+        kfold = model_selection.KFold(n_splits=3, shuffle=True, random_state=90210)
         cv_results = model_selection.cross_validate(model, X_train, y_train, cv=kfold, scoring=scoring)
         clf = model.fit(X_train, y_train)
         y_pred = clf.predict(X_test)
         print(name)
-        print(classification_report(y_test, y_pred, target_names=target_names))
+        print(classification_report(y_test, y_pred))
+        reports.append(classification_report(y_test, y_pred))
+
         results.append(cv_results)
         names.append(name)
         this_df = pd.DataFrame(cv_results)
@@ -68,6 +75,4 @@ def run_exps(X_train, y_train, X_test, y_test) -> pd.DataFrame:
         dfs.append(this_df)
     final = pd.concat(dfs, ignore_index=True)
     return final
-    
-target_names = ['long', 'short']
-print(classification_report(X, y, target_names=target_names))
+result = run_exps(X_train, y_train, X_test, y_test)
