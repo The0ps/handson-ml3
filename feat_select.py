@@ -16,25 +16,33 @@ import pandas as pd
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
 """ Feature selection """
-df = pd.read_json('2022-09-08 09:10:57.051192.json' )
+df = pd.read_json('data0910.json' )
 df['profit_ratio'] = (df['profit_ratio'].multiply(100)).round(2).astype(str) + '%'
 
 
-""" prepare labels """
-long_df = df.loc[(df['is_short'] == False)]
-short_df =  df.loc[(df['is_short'] == True)]
+# """ prepare labels """
+# long_df = df.loc[(df['is_short'] == False)]
+# short_df =  df.loc[(df['is_short'] == True)]
 
 """  Long experiment   """
 
 features = []
-for i in range(20):
+for i in range(1,21):
     features.append(f'rsi_-{i}')
     features.append(f'mfi_-{i}')
     features.append(f'kc_-{i}')
     features.append(f'ema21_-{i}')
+    df[f'kc_-{i}'] = df['kc_middleband'].shift(i)
+    df[f'ema21_-{i}'] = df['ema21'].shift(i)
+    df[f'rsi_-{i}'] = df['rsi'].shift(i)
+    df[f'mfi_-{i}'] = df['mfi'].shift(i)
+""" prepare labels """
+long_df = df.loc[(df['is_short'] == False)]
+short_df =  df.loc[(df['is_short'] == True)]
 
-X = long_df[features]
-y = long_df['label']
+
+X = df[features]
+y = df['label']
 X_pipeline = make_pipeline(StandardScaler())
 y_pipeline = make_pipeline(OrdinalEncoder())
 X = X_pipeline.fit_transform(X)
@@ -64,8 +72,8 @@ def run_exps(X_train, y_train, X_test, y_test) -> pd.DataFrame:
         cv_results = model_selection.cross_validate(model, X_train, y_train, cv=kfold, scoring=scoring)
         clf = model.fit(X_train, y_train)
         y_pred = clf.predict(X_test)
-        print(name)
-        print(classification_report(y_test, y_pred))
+        # print(name)
+        print(name, classification_report(y_test, y_pred))
         reports.append(classification_report(y_test, y_pred))
 
         results.append(cv_results)
@@ -74,5 +82,9 @@ def run_exps(X_train, y_train, X_test, y_test) -> pd.DataFrame:
         this_df['model'] = name
         dfs.append(this_df)
     final = pd.concat(dfs, ignore_index=True)
-    return final
-result = run_exps(X_train, y_train, X_test, y_test)
+    return final, reports
+result, reports = run_exps(X_train, y_train, X_test, y_test)
+
+
+
+
